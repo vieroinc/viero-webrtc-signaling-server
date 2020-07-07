@@ -23,7 +23,7 @@ VieroLog.level = VieroLog.LEVEL.TRACE;
 
 const server = new VieroHTTP();
 const signalingServer = new VieroWebRTCSignalingServer();
-server.setCORSOptions({ origins: ['localhost'] });
+server.setCORSOptions({ origins: ['http://localhost:8080'], headers: ['content-type'] });
 server.registerFilter(bodyFilter, 'The body filter.');
 server.run({ port: 8090 });
 signalingServer.run(server);

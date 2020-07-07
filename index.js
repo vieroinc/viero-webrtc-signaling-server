@@ -15,8 +15,13 @@
  */
 
 const SocketIO = require('socket.io');
-const { respondCreated } = require('@viero/common-nodejs/http/respond');
+const { respondCreated, respondError } = require('@viero/common-nodejs/http/respond');
+const { http412 } = require('@viero/common-nodejs/http/error');
 const { VieroWebRTCSignalingCommon } = require('@viero/webrtc-signaling-common');
+const { VieroLog } = require('@viero/common/log');
+const { VieroUID } = require('@viero/common/uid');
+
+const log = new VieroLog('/signaling/server');
 
 class VieroWebRTCSignalingServer {
 
@@ -26,34 +31,38 @@ class VieroWebRTCSignalingServer {
       ({ req: { body }, res }) => {
         this.ensureNameSpace(body.name).then((nameSpace) => {
           if (nameSpace) {
-            return respondCreated(res, { somethingIs: true });
+            return respondCreated(res, { namespace: nameSpace.name });
           }
+          respondError(res, http412());
         });
       },
       'Creates a signaling namespace, eg a room.'
     );
 
     this._io = SocketIO(server.httpServer);
+    this._io.engine.generateId = (req) => VieroUID.uuid();
   }
 
   ensureNameSpace(name) {
-    debugger;
-    const nameSpace = this._io.of(`/${name}`);
-
-    nameSpace.on('connect', (socket) => {
-      debugger;
-      socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.ENTER, socket.id);
-      socket.on('signal', (payload) => {
-        debugger;
+    name = `/${name}`;
+    if (this._io.nsps[name]) {
+      return Promise.resolve(this._io.nsps[name]);
+    }
+    const nsp = this._io.of(name);
+    nsp.on('connection', (socket) => {
+      const socketId = socket.id;
+      log.debug('Socket connected', socketId);
+      socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.ENTER, socketId);
+      socket.on(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, (payload) => {
+        log.debug('Socket is sending', socketId);
         socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, payload);
       });
+      socket.on('disconnect', (socket) => {
+        log.debug('Socket disconnected', socketId);
+        nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.LEAVE, socketId);
+      });
     });
-    nameSpace.on('disconnect', (socket) => {
-      debugger;
-      socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.LEAVE, socket.id);
-    });
-
-    return Promise.resolve(nameSpace);
+    return Promise.resolve(nsp);
   };
 
 };
