@@ -2,16 +2,27 @@
   "name": "@viero/webrtc-signaling-server",
   "version": "1.0.0",
   "description": "WebRTC signaling server library by @vieroinc.",
+  "homepage": "https://github.com/vieroinc/viero-webrtc-signaling-server",
+  "contributors": [
+    {
+      "name": "Zoltan Gobolos",
+      "email": "zoltan.gobolos@viero.tv"
+    }
+  ],
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vieroinc/viero-webrtc-signaling-server.git"
+  },
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "reset": "rm -rf node_modules"
   },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@viero/common": "^1.4.3",
     "@viero/common-nodejs": "^1.0.2",
     "@viero/webrtc-signaling-common": "^1.0.1",
     "socket.io": "^2.3.0"
-  }
+  },
+  "devDependencies": {}
 }
