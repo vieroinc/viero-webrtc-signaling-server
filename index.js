@@ -15,35 +15,38 @@
  */
 
 const SocketIO = require('socket.io');
+const { VieroWebRTCSignalingCommon } = require('@viero/webrtc-signaling-common');
+// const { VieroLog } = require('@viero/common/log');
+const { VieroUID } = require('@viero/common/uid');
 const { respondCreated, respondError } = require('@viero/common-nodejs/http/respond');
 const { http412 } = require('@viero/common-nodejs/http/error');
-const { VieroWebRTCSignalingCommon } = require('@viero/webrtc-signaling-common');
-const { VieroLog } = require('@viero/common/log');
-const { VieroUID } = require('@viero/common/uid');
+const { emitEvent } = require('@viero/common-nodejs/event');
 
-const log = new VieroLog('/signaling/server');
+
+// const log = new VieroLog('/signaling/server');
 
 class VieroWebRTCSignalingServer {
 
-  run(server) {
-    server.post(
-      '/signaling/namespace',
-      ({ req: { body }, res }) => {
-        this.ensureNameSpace(body.name).then((nameSpace) => {
-          if (nameSpace) {
-            return respondCreated(res, { namespace: nameSpace.name });
-          }
-          respondError(res, http412());
-        });
-      },
-      'Creates a signaling namespace, eg a room.'
-    );
-
+  run(server, options = {}) {
+    if (options.bindAdminEndpoint) {
+      server.post(
+        '/signaling/namespace',
+        ({ req: { body }, res }) => {
+          this.ensureNamespace(body.name).then((nsp) => {
+            if (nsp) {
+              return respondCreated(res, { namespace: nsp.name });
+            }
+            respondError(res, http412());
+          });
+        },
+        'Creates a signaling namespace, eg a room.'
+      );
+    }
     this._io = SocketIO(server.httpServer);
     this._io.engine.generateId = (req) => VieroUID.uuid();
   }
 
-  ensureNameSpace(name) {
+  ensureNamespace(name) {
     name = `/${name}`;
     if (this._io.nsps[name]) {
       return Promise.resolve(this._io.nsps[name]);
@@ -51,19 +54,51 @@ class VieroWebRTCSignalingServer {
     const nsp = this._io.of(name);
     nsp.on('connection', (socket) => {
       const socketId = socket.id;
+      emitEvent(VieroWebRTCSignalingServer.EVENT.DID_ENTER_NAMESPACE, { namespace: name, socketId });
       socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.ENTER, socketId);
-      socket.on(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, (payload) => {
-        socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, payload);
+      socket.on(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, (message) => {
+        if (!message) return;
+        emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace: name, message });
+        if (message.to) {
+          const toSocket = nsp.sockets[message.to];
+          if (!toSocket) return;
+          toSocket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
+        } else {
+          socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
+        }
       });
       socket.on('disconnect', (socket) => {
+        emitEvent(VieroWebRTCSignalingServer.EVENT.DID_LEAVE_NAMESPACE, { namespace: name, socketId });
         nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.LEAVE, socketId);
       });
     });
+    emitEvent(VieroWebRTCSignalingServer.EVENT.DID_CREATE_NAMESPACE, { namespace: name });
     return Promise.resolve(nsp);
   };
 
+  send(namespace, message) {
+    const nsp = this._io.nsps[namespace];
+    if (nsp) {
+      if (message.to) {
+        const socket = nsp.sockets[message.to];
+        if (socket) {
+          socket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
+        }
+      } else {
+        nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
+      }
+    }
+  }
+
+};
+
+VieroWebRTCSignalingServer.EVENT = {
+  DID_CREATE_NAMESPACE: 'VieroWebRTCSignalingServerEventDidCreateNamespace',
+  DID_ENTER_NAMESPACE: 'VieroWebRTCSignalingServerEventDidEnterNamespace',
+  DID_MESSAGE_NAMESPACE: 'VieroWebRTCSignalingServerEventDidMessageNamespace',
+  DID_LEAVE_NAMESPACE: 'VieroWebRTCSignalingServerEventDidLeaveNamespace',
 };
 
 module.exports = {
-  VieroWebRTCSignalingServer,
+  VieroWebRTCSignalingServer, VieroWebRTCSignalingServerEvent: VieroWebRTCSignalingServer.EVENT,
 };
