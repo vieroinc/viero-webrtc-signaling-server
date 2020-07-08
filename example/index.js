@@ -15,13 +15,13 @@
  */
 
 const { VieroLog } = require('@viero/common/log');
-const { VieroHTTP } = require('@viero/common-nodejs/http');
+const { VieroHTTPServer } = require('@viero/common-nodejs/http');
 const { bodyFilter } = require('@viero/common-nodejs/http/filters/ext/body');
 const { VieroWebRTCSignalingServer } = require('../');
 
 VieroLog.level = VieroLog.LEVEL.TRACE;
 
-const server = new VieroHTTP();
+const server = new VieroHTTPServer();
 const signalingServer = new VieroWebRTCSignalingServer();
 server.setCORSOptions({ origins: ['http://localhost:8080'], headers: ['content-type'] });
 server.registerFilter(bodyFilter, 'The body filter.');

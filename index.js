@@ -51,14 +51,11 @@ class VieroWebRTCSignalingServer {
     const nsp = this._io.of(name);
     nsp.on('connection', (socket) => {
       const socketId = socket.id;
-      log.debug('Socket connected', socketId);
       socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.ENTER, socketId);
       socket.on(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, (payload) => {
-        log.debug('Socket is sending', socketId);
         socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, payload);
       });
       socket.on('disconnect', (socket) => {
-        log.debug('Socket disconnected', socketId);
         nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.LEAVE, socketId);
       });
     });
