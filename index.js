@@ -18,6 +18,7 @@ const SocketIO = require('socket.io');
 const { VieroWebRTCSignalingCommon } = require('@viero/webrtc-signaling-common');
 // const { VieroLog } = require('@viero/common/log');
 const { VieroUID } = require('@viero/common/uid');
+const { VieroWebRTCCommon } = require('@viero/webrtc-common');
 const { respondCreated, respondError } = require('@viero/common-nodejs/http/respond');
 const { http412 } = require('@viero/common-nodejs/http/error');
 const { emitEvent } = require('@viero/common-nodejs/event');
@@ -54,20 +55,38 @@ class VieroWebRTCSignalingServer {
     const nsp = this._io.of(namespace);
     nsp.on('connection', (socket) => {
       const socketId = socket.id;
+
+      // 1. let existing peers know about new peer.
       emitEvent(VieroWebRTCSignalingServer.EVENT.DID_ENTER_NAMESPACE, { namespace, socketId });
       socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.ENTER, { socketId });
-      socket.on(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, (message) => {
-        if (!message) return;
-        message.from = socket.id;
-        if (message.to) {
-          const toSocket = nsp.sockets[message.to];
+
+      // 2. let new peer know about existing peers.
+      const payload = { word: VieroWebRTCCommon.WORD.HELLO, data: Object.keys(nsp.sockets).filter((socketId) => socketId !== socket.id) };
+      const envelope = { payload, to: socket.id };
+      emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, ...envelope });
+      socket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, envelope);
+
+      // 3. subscribe socket to MESSAGE
+      socket.on(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, (envelope) => {
+        if (!envelope) return;
+
+        // 3.1. complete envelope
+        envelope.from = socket.id;
+
+        if (envelope.to) {
+
+          // 3.2. envelopes with "to" shall be delivered to specific socket
+          const toSocket = nsp.sockets[envelope.to];
           if (!toSocket) return;
-          emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, message });
-          toSocket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
+          emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, ...envelope });
+          toSocket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, envelope);
+
         } else {
-          emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, message });
-          // if no recipient is set the recipient is the server
-          //socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
+
+          // 3.3. envelopes without "to" shall be delivered to all sockets except the sender one
+          emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, ...envelope });
+          socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, envelope);
+
         }
       });
       socket.on('disconnect', (socket) => {
@@ -87,14 +106,12 @@ class VieroWebRTCSignalingServer {
     if (to) {
       const socket = nsp.sockets[to];
       if (socket) {
-        const message = { payload, to };
-        emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, message });
-        socket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
+        emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, payload, to });
+        socket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, payload);
       }
     } else {
-      const message = { payload };
-      emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, message });
-      nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
+      emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, payload });
+      nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, payload);
     }
   }
 
