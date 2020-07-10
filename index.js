@@ -66,7 +66,8 @@ class VieroWebRTCSignalingServer {
           toSocket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
         } else {
           emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, message });
-          socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
+          // if no recipient is set the recipient is the server
+          //socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
         }
       });
       socket.on('disconnect', (socket) => {
