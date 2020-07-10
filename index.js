@@ -100,5 +100,5 @@ VieroWebRTCSignalingServer.EVENT = {
 };
 
 module.exports = {
-  VieroWebRTCSignalingServer, VieroWebRTCSignalingServerEvent: VieroWebRTCSignalingServer.EVENT,
+  VieroWebRTCSignalingServer,
 };
