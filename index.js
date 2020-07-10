@@ -86,10 +86,14 @@ class VieroWebRTCSignalingServer {
     if (to) {
       const socket = nsp.sockets[to];
       if (socket) {
-        socket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, { payload, to });
+        const message = { payload, to };
+        emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, message });
+        socket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
       }
     } else {
-      nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, { payload });
+      const message = { payload };
+      emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, message });
+      nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
     }
   }
 

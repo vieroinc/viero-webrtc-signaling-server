@@ -43,5 +43,8 @@ const server = new VieroHTTPServer();
 const signalingServer = new VieroWebRTCSignalingServer();
 server.setCORSOptions({ origins: ['http://localhost:8080'], headers: ['content-type'] });
 server.registerFilter(bodyFilter, 'The body filter.');
-server.run({ port: 8090 });
-signalingServer.run(server, { bindAdminEndpoint: true });
+server.run({ port: 8090 }).then(() => {
+  signalingServer.run(server, { bindAdminEndpoint: true });
+}).catch((err) => {
+  log.error(err.userData[VieroError.KEY.ERROR].toString());
+});
