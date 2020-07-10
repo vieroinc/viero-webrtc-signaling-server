@@ -55,7 +55,7 @@ class VieroWebRTCSignalingServer {
     nsp.on('connection', (socket) => {
       const socketId = socket.id;
       emitEvent(VieroWebRTCSignalingServer.EVENT.DID_ENTER_NAMESPACE, { namespace, socketId });
-      socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.ENTER, socketId);
+      socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.ENTER, { socketId });
       socket.on(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, (message) => {
         if (!message) return;
         message.from = socket.id;
@@ -71,7 +71,7 @@ class VieroWebRTCSignalingServer {
       });
       socket.on('disconnect', (socket) => {
         emitEvent(VieroWebRTCSignalingServer.EVENT.DID_LEAVE_NAMESPACE, { namespace, socketId });
-        nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.LEAVE, socketId);
+        nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.LEAVE, { socketId });
       });
     });
     emitEvent(VieroWebRTCSignalingServer.EVENT.DID_CREATE_NAMESPACE, { namespace });
