@@ -46,47 +46,50 @@ class VieroWebRTCSignalingServer {
     this._io.engine.generateId = (req) => VieroUID.uuid();
   }
 
-  ensureNamespace(name) {
-    name = `/${name}`;
-    if (this._io.nsps[name]) {
-      return Promise.resolve(this._io.nsps[name]);
+  ensureNamespace(namespace) {
+    namespace = `/${namespace}`;
+    if (this._io.nsps[namespace]) {
+      return Promise.resolve(this._io.nsps[namespace]);
     }
-    const nsp = this._io.of(name);
+    const nsp = this._io.of(namespace);
     nsp.on('connection', (socket) => {
       const socketId = socket.id;
-      emitEvent(VieroWebRTCSignalingServer.EVENT.DID_ENTER_NAMESPACE, { namespace: name, socketId });
+      emitEvent(VieroWebRTCSignalingServer.EVENT.DID_ENTER_NAMESPACE, { namespace, socketId });
       socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.ENTER, socketId);
       socket.on(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, (message) => {
         if (!message) return;
-        emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace: name, message });
+        message.from = socket.id;
         if (message.to) {
           const toSocket = nsp.sockets[message.to];
           if (!toSocket) return;
+          emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, message });
           toSocket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
         } else {
+          emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, message });
           socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
         }
       });
       socket.on('disconnect', (socket) => {
-        emitEvent(VieroWebRTCSignalingServer.EVENT.DID_LEAVE_NAMESPACE, { namespace: name, socketId });
+        emitEvent(VieroWebRTCSignalingServer.EVENT.DID_LEAVE_NAMESPACE, { namespace, socketId });
         nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.LEAVE, socketId);
       });
     });
-    emitEvent(VieroWebRTCSignalingServer.EVENT.DID_CREATE_NAMESPACE, { namespace: name });
+    emitEvent(VieroWebRTCSignalingServer.EVENT.DID_CREATE_NAMESPACE, { namespace });
     return Promise.resolve(nsp);
   };
 
-  send(namespace, message) {
+  send(namespace, payload, to) {
     const nsp = this._io.nsps[namespace];
-    if (nsp) {
-      if (message.to) {
-        const socket = nsp.sockets[message.to];
-        if (socket) {
-          socket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
-        }
-      } else {
-        nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, message);
+    if (!nsp) {
+      return;
+    }
+    if (to) {
+      const socket = nsp.sockets[to];
+      if (socket) {
+        socket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, { payload, to });
       }
+    } else {
+      nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, { payload });
     }
   }
 

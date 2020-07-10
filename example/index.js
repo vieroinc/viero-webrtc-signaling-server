@@ -29,11 +29,11 @@ onEvent(VieroWebRTCSignalingServer.EVENT.DID_CREATE_NAMESPACE, (data) => {
 });
 onEvent(VieroWebRTCSignalingServer.EVENT.DID_ENTER_NAMESPACE, (data) => {
   log.info(`Received DID_ENTER_NAMESPACE (${data.namespace}), sending KONICHIWA to ${data.socketId}`);
-  signalingServer.send(data.namespace, { to: data.socketId, payload: { word: 'konichiwa' } });
+  signalingServer.send(data.namespace, { word: 'konichiwa' }, data.socketId);
 });
 onEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, (data) => {
   log.info(`Received DID_MESSAGE_NAMESPACE (${data.namespace}), sending HAI to ${data.message.from}`);
-  signalingServer.send(data.namespace, { to: data.message.from, payload: { word: 'hai' } });
+  signalingServer.send(data.namespace, { word: 'hai' }, data.message.from);
 });
 onEvent(VieroWebRTCSignalingServer.EVENT.DID_LEAVE_NAMESPACE, (data) => {
   log.info(`Received DID_LEAVE_NAMESPACE (${data.namespace}) from ${data.socketId}. SAYONARA!`);
