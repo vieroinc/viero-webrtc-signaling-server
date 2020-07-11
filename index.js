@@ -126,6 +126,13 @@ class VieroWebRTCSignalingServer {
     }
   }
 
+  close(namespace, socketId) {
+    const socket = this._io.nsps[namespace].sockets[socketId];
+    if (socket) {
+      socket.disconnect();
+    }
+  }
+
 };
 
 VieroWebRTCSignalingServer.EVENT = {
