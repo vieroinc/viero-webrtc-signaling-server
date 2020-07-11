@@ -26,9 +26,15 @@ const { emitEvent } = require('@viero/common-nodejs/event');
 
 // const log = new VieroLog('/signaling/server');
 
+const _defaultOptions = {
+  bindAdminEndpoint: true,
+  relayNonAddresed: true,
+};
+
 class VieroWebRTCSignalingServer {
 
   run(server, options = {}) {
+    options = { ..._defaultOptions, ...options };
     if (options.bindAdminEndpoint) {
       server.post(
         '/signaling/namespace',
@@ -43,6 +49,7 @@ class VieroWebRTCSignalingServer {
         'Creates a signaling namespace, eg a room.'
       );
     }
+    this._options = options;
     this._io = SocketIO(server.httpServer);
     this._io.engine.generateId = (req) => VieroUID.uuid();
   }
@@ -79,16 +86,17 @@ class VieroWebRTCSignalingServer {
           // delivering to the peer and messaging the embedding application too
           const toSocket = nsp.sockets[envelope.to];
           if (!toSocket) return;
-          emitEvent(VieroWebRTCSignalingServer.EVENT.WILL_RELAY_ENVELOPE, { namespace, ...envelope });
+          emitEvent(VieroWebRTCSignalingServer.EVENT.WILL_RELAY_ENVELOPE, { namespace, ...envelope, relay: true });
           toSocket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, envelope);
 
         } else {
 
           // 3.3. envelopes without "to" shall be delivered to all sockets except the sender one
           // broadcasting to everyone except the peer and messaging the embedding application too
-          emitEvent(VieroWebRTCSignalingServer.EVENT.WILL_RELAY_ENVELOPE, { namespace, ...envelope });
-          socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, envelope);
-
+          emitEvent(VieroWebRTCSignalingServer.EVENT.WILL_RELAY_ENVELOPE, { namespace, ...envelope, relay: this._options.relayNonAddresed });
+          if (this._options.relayNonAddresed) {
+            socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, envelope);
+          }
         }
       });
       socket.on('disconnect', (socket) => {
