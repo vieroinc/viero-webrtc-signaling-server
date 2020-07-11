@@ -28,7 +28,7 @@ const { emitEvent } = require('@viero/common-nodejs/event');
 
 const _defaultOptions = {
   bindAdminEndpoint: true,
-  relayNonAddresed: true,
+  relayNonAddressed: true,
 };
 
 class VieroWebRTCSignalingServer {
@@ -93,8 +93,8 @@ class VieroWebRTCSignalingServer {
 
           // 3.3. envelopes without "to" shall be delivered to all sockets except the sender one
           // broadcasting to everyone except the peer and messaging the embedding application too
-          emitEvent(VieroWebRTCSignalingServer.EVENT.WILL_RELAY_ENVELOPE, { namespace, ...envelope, relay: this._options.relayNonAddresed });
-          if (this._options.relayNonAddresed) {
+          emitEvent(VieroWebRTCSignalingServer.EVENT.WILL_RELAY_ENVELOPE, { namespace, ...envelope, relay: this._options.relayNonAddressed });
+          if (this._options.relayNonAddressed) {
             socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, envelope);
           }
         }
