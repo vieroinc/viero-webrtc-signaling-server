@@ -15,6 +15,7 @@
  */
 
 const { VieroLog } = require('@viero/common/log');
+const { VieroError } = require('@viero/common/error');
 const { onEvent } = require('@viero/common-nodejs/event');
 const { VieroHTTPServer } = require('@viero/common-nodejs/http');
 const { bodyFilter } = require('@viero/common-nodejs/http/filters/ext/body');
@@ -31,9 +32,13 @@ onEvent(VieroWebRTCSignalingServer.EVENT.DID_ENTER_NAMESPACE, (data) => {
   log.info(`Received DID_ENTER_NAMESPACE (${data.namespace}), sending KONICHIWA to ${data.socketId}`);
   signalingServer.send(data.namespace, { word: 'konichiwa' }, data.socketId);
 });
-onEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, (data) => {
-  log.info(`Received DID_MESSAGE_NAMESPACE (${data.namespace}), sending HAI to ${data.message.from}`);
-  signalingServer.send(data.namespace, { word: 'hai' }, data.message.from);
+onEvent(VieroWebRTCSignalingServer.EVENT.WILL_RELAY_ENVELOPE, (data) => {
+  log.info(`Received WILL_RELAY_ENVELOPE (${data.namespace}), sending WAKARIMASU to ${data.from}`);
+  signalingServer.send(data.namespace, { word: 'wakarimasu' }, data.from);
+});
+onEvent(VieroWebRTCSignalingServer.EVENT.WILL_DELIVER_ENVELOPE, (data) => {
+  log.info(`Received WILL_DELIVER_ENVELOPE (${data.namespace}), sending to ${data.from ? data.from : 'ALL'}`);
+  // signalingServer.send(data.namespace, { word: 'hai' }, data.from);
 });
 onEvent(VieroWebRTCSignalingServer.EVENT.DID_LEAVE_NAMESPACE, (data) => {
   log.info(`Received DID_LEAVE_NAMESPACE (${data.namespace}) from ${data.socketId}. SAYONARA!`);
