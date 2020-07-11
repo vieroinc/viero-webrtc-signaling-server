@@ -103,15 +103,16 @@ class VieroWebRTCSignalingServer {
     if (!nsp) {
       return;
     }
+    const envelope = { payload, ...(to ? { to } : {}) };
     if (to) {
       const socket = nsp.sockets[to];
       if (socket) {
-        emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, payload, to });
-        socket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, payload);
+        emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, ...envelope });
+        socket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, envelope);
       }
     } else {
-      emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, payload });
-      nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, payload);
+      emitEvent(VieroWebRTCSignalingServer.EVENT.DID_MESSAGE_NAMESPACE, { namespace, ...envelope });
+      nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, envelope);
     }
   }
 
