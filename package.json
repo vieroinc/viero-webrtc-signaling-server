@@ -1,6 +1,6 @@
 {
   "name": "@viero/webrtc-signaling-server",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "WebRTC signaling server library by @vieroinc.",
   "homepage": "https://github.com/vieroinc/viero-webrtc-signaling-server",
   "contributors": [
@@ -25,7 +25,7 @@
   "module": "./index.js",
   "dependencies": {
     "@viero/common": "^1.5.0",
-    "@viero/common-nodejs": "^1.0.12",
+    "@viero/common-nodejs": "^1.0.13",
     "@viero/webrtc-common": "^1.0.3",
     "@viero/webrtc-signaling-common": "^1.0.4",
     "socket.io": "^2.3.0"

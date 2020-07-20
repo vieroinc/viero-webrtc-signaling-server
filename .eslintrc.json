@@ -6,7 +6,7 @@
     "node": true,
     "es6": true
   },
-  "ignorePatterns": ["ffmpeg.js"],
+  "ignorePatterns": ["example"],
   "rules": {
     "no-console": "warn",
     "no-underscore-dangle": ["error", { "allowAfterThis": true, "allowAfterThisConstructor": true }],

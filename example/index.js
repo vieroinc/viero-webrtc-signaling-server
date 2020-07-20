@@ -18,8 +18,8 @@ const { VieroLog } = require('@viero/common/log');
 const { VieroError } = require('@viero/common/error');
 const { onEvent } = require('@viero/common-nodejs/event');
 const { VieroHTTPServer } = require('@viero/common-nodejs/http');
-const { bodyFilter } = require('@viero/common-nodejs/http/filters/ext/body');
-const { VieroWebRTCSignalingServer } = require('../');
+const { VieroBodyFilter } = require('@viero/common-nodejs/http/filter/ext/body');
+const { VieroWebRTCSignalingServer } = require('..');
 
 VieroLog.level = VieroLog.LEVEL.TRACE;
 
@@ -46,8 +46,8 @@ onEvent(VieroWebRTCSignalingServer.EVENT.DID_LEAVE_NAMESPACE, (data) => {
 
 const server = new VieroHTTPServer();
 const signalingServer = new VieroWebRTCSignalingServer();
-server.setCORSOptions({ origins: ['http://localhost:8080'], headers: ['content-type'] });
-server.registerFilter(bodyFilter, 'The body filter.');
+server.setCORSOptions({ origins: ['localhost'], headers: ['content-type'] });
+server.registerFilter(new VieroBodyFilter(server), 'The body filter.');
 server.run({ port: 8090 }).then(() => {
   signalingServer.run(server, { bindAdminEndpoint: true });
 }).catch((err) => {
