@@ -17,41 +17,40 @@
 const SocketIO = require('socket.io');
 const { VieroWebRTCSignalingCommon } = require('@viero/webrtc-signaling-common');
 // const { VieroLog } = require('@viero/common/log');
-const { VieroUID } = require('@viero/common/uid');
+const { uuid } = require('@viero/common/uid');
 const { VieroWebRTCCommon } = require('@viero/webrtc-common');
 const { respondCreated, respondError } = require('@viero/common-nodejs/http/respond');
 const { http412 } = require('@viero/common-nodejs/http/error');
 const { emitEvent } = require('@viero/common-nodejs/event');
 
-
 // const log = new VieroLog('/signaling/server');
 
-const _defaultOptions = {
+const DEFAULT_OPTIONS = {
   bindAdminEndpoint: true,
   relayNonAddressed: true,
 };
 
 class VieroWebRTCSignalingServer {
-
   run(server, options = {}) {
-    options = { ..._defaultOptions, ...options };
+    options = { ...DEFAULT_OPTIONS, ...options };
     if (options.bindAdminEndpoint) {
       server.post(
         '/signaling/namespace',
         ({ req: { body }, res }) => {
           this.ensureNamespace(body.name).then((nsp) => {
             if (nsp) {
-              return respondCreated(res, { namespace: nsp.name });
+              respondCreated(res, { namespace: nsp.name });
+              return;
             }
             respondError(res, http412());
           });
         },
-        'Creates a signaling namespace, eg a room.'
+        'Creates a signaling namespace, eg a room.',
       );
     }
     this._options = options;
     this._io = SocketIO(server.httpServer);
-    this._io.engine.generateId = (req) => VieroUID.uuid();
+    this._io.engine.generateId = () => uuid();
   }
 
   ensureNamespace(namespace) {
@@ -70,7 +69,10 @@ class VieroWebRTCSignalingServer {
 
       // 2. let new peer know about existing peers.
       // routing to send() API
-      const payload = { word: VieroWebRTCCommon.WORD.HELLO, data: Object.keys(nsp.sockets).filter((socketId) => socketId !== socket.id) };
+      const payload = {
+        word: VieroWebRTCCommon.WORD.HELLO,
+        data: Object.keys(nsp.sockets).filter((aSocketId) => aSocketId !== socket.id),
+      };
       this.send(namespace, payload, socket.id);
 
       // 3. subscribe socket to MESSAGE
@@ -81,32 +83,33 @@ class VieroWebRTCSignalingServer {
         envelope.from = socket.id;
 
         if (envelope.to) {
-
           // 3.2. envelopes with "to" shall be delivered to specific socket
           // delivering to the peer and messaging the embedding application too
           const toSocket = nsp.sockets[envelope.to];
           if (!toSocket) return;
           emitEvent(VieroWebRTCSignalingServer.EVENT.WILL_RELAY_ENVELOPE, { namespace, ...envelope, relay: true });
           toSocket.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, envelope);
-
         } else {
-
           // 3.3. envelopes without "to" shall be delivered to all sockets except the sender one
           // broadcasting to everyone except the peer and messaging the embedding application too
-          emitEvent(VieroWebRTCSignalingServer.EVENT.WILL_RELAY_ENVELOPE, { namespace, ...envelope, relay: this._options.relayNonAddressed });
+          emitEvent(VieroWebRTCSignalingServer.EVENT.WILL_RELAY_ENVELOPE, {
+            namespace,
+            ...envelope,
+            relay: this._options.relayNonAddressed,
+          });
           if (this._options.relayNonAddressed) {
             socket.broadcast.emit(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, envelope);
           }
         }
       });
-      socket.on('disconnect', (socket) => {
+      socket.on('disconnect', () => {
         emitEvent(VieroWebRTCSignalingServer.EVENT.DID_LEAVE_NAMESPACE, { namespace, socketId });
         nsp.emit(VieroWebRTCSignalingCommon.SIGNAL.LEAVE, { socketId });
       });
     });
     emitEvent(VieroWebRTCSignalingServer.EVENT.DID_CREATE_NAMESPACE, { namespace });
     return Promise.resolve(nsp);
-  };
+  }
 
   send(namespace, payload, to) {
     const nsp = this._io.nsps[namespace];
@@ -132,8 +135,7 @@ class VieroWebRTCSignalingServer {
       socket.disconnect();
     }
   }
-
-};
+}
 
 VieroWebRTCSignalingServer.EVENT = {
   DID_CREATE_NAMESPACE: 'VieroWebRTCSignalingServerEventDidCreateNamespace',
