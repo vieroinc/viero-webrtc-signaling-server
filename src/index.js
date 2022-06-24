@@ -19,8 +19,8 @@ const { VieroWebRTCSignalingCommon } = require('@viero/webrtc-signaling-common')
 // const { VieroLog } = require('@viero/common/log');
 const { uuid } = require('@viero/common/uid');
 const { VieroWebRTCCommon } = require('@viero/webrtc-common');
-const { respondCreated, respondError } = require('@viero/common-nodejs/http/respond');
-const { http412 } = require('@viero/common-nodejs/http/error');
+const { respondCreated, respondError } = require('@viero/common-nodejs/http/server/respond');
+const { http412 } = require('@viero/common-nodejs/http/server/error');
 const { emitEvent } = require('@viero/common-nodejs/event');
 
 // const log = new VieroLog('/signaling/server');
